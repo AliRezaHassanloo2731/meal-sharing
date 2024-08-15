@@ -4,10 +4,14 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import knex from "./database_client.js";
 import nestedRouter from "./routers/nested.js";
+import mealsRouter from "./routers/meals.js";
+import reservationsRouter from "./routers/reservations.js";
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use("api/meals", mealsRouter);
+app.use("/api/reservations", reservationsRouter);
 
 const apiRouter = express.Router();
 
@@ -43,7 +47,7 @@ apiRouter.get("/past-meals", async (req, res) => {
 
 apiRouter.get("/all-meals", async (req, res) => {
   try {
-    const meals = await knex.raw("SELECT * FROM meal ORDER BY id");
+    const meals = await knex.raw("SELECT * FROM Meal ORDER BY id");
     res.json(meals[0]);
   } catch (error) {
     res.status(404).json({ error: error.message });
@@ -52,7 +56,7 @@ apiRouter.get("/all-meals", async (req, res) => {
 
 app.get("/first-meal", async (req, res) => {
   try {
-    const meal = await knex.raw("SELECT * FROM meal ORDER BY id ASC LIMIT 1");
+    const meal = await knex.raw("SELECT * FROM Meal ORDER BY id ASC LIMIT 1");
     if (meal[0].length > 0) {
       res.json(meal[0][0]);
     } else {
@@ -65,7 +69,7 @@ app.get("/first-meal", async (req, res) => {
 
 app.get("/last-meal", async (req, res) => {
   try {
-    const meal = await knex.raw("SELECT * FROM meal ORDER BY id DESC LIMIT 1");
+    const meal = await knex.raw("SELECT * FROM Meal ORDER BY id DESC LIMIT 1");
     if (meal[0].length > 0) {
       res.json(meal[0][0]);
     } else {
