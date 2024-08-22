@@ -20,6 +20,94 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/", async (req, res) => {
+  try {
+    const { availableReservations } = req.query;
+
+    let query = knex("Meal")
+      .select("Meal.*")
+      .leftJoin("Reservation", "Meal.id", "Reservation.meal_id")
+      .groupBy("Meal.id")
+      .count("Reservation.id as reservation_count")
+      .select(
+        knex.raw(
+          "Meal.max_reservations - COUNT(Reservation.id) as available_spots"
+        )
+      );
+
+    if (availableReservations === "true") {
+      query = query.having(knex.raw("available_spots"), ">", 0);
+    } else if (availableReservations === "false") {
+      query = query.having(knex.raw("available_spots"), "<=", 0);
+    }
+
+    const meals = await query;
+
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const { title } = req.query;
+    const meals = await knex("Meal")
+      .where("title", "LIKE", `%${title}%`)
+      .orWhere("description", "LIKE", `%${title}%`);
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const { dateAfter } = req.query;
+    const meals = await knex("Meal")
+      .where("when", ">=", dateAfter)
+      .orWhereRaw("DATE(when) = DATE(?)", [dateAfter]);
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/", async (req, res) => {
+  try {
+    const { limit } = req.query;
+    const meals = await knex("Meal").limit(limit);
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/", async (req, res) => {
+  const sortKey = req.query.sortKey || "when";
+  const sortOrder = req.query.sortOrder || "asc";
+  try {
+    const meals = await knex("Meal").orderBy(sortKey, sortOrder);
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Parameter:sortDir
+Data type:String,
+Description:Returns all meals sorted in the given direction. Only works combined with the sortKey and allows asc or desc.
+Example:api/meals?sortKey=price&sortDir=desc */
+router.get("/", async (req, res) => {
+  try {
+    const sortDir = req.query.sortDir || "asc";
+    const meals = await knex("Meal").orderBy("price", sortDir);
+    res.json(meals);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // router.get("/", async (req, res) => {
 //   try {
 //     const [allMeals] = await knex.raw("SELECT * FROM Meal");
