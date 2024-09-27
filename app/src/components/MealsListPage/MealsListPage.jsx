@@ -1,7 +1,8 @@
+// src/components/MealsListPage/MealsListPage.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../api";
-import { Link } from "react-router-dom";
-import "./MealsListPage.css";
+import Meal from "../Meal/Meal";
+import "./MealsListPage.css"; // Add styles for the grid
 
 function MealsListPage() {
   const [meals, setMeals] = useState([]);
@@ -17,17 +18,13 @@ function MealsListPage() {
   }, []);
 
   return (
-    <div>
+    <div className="meals-list-page">
       <h1>Available Meals</h1>
-      <ul>
+      <div className="meals-grid">
         {meals.map((meal) => (
-          <li key={meal.id}>
-            <Link to={`/meals/${meal.id}`}>
-              {meal.title}
-            </Link>
-          </li>
+          <Meal key={meal.id} meal={meal} />
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
