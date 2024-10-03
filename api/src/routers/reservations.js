@@ -5,8 +5,11 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const reservations = await knex.select("*").from("Reservation");
-    res.json(reservations);
+    const reservations = await knex
+      .select("*")
+      .from("Reservation");
+    // res.json(reservations);
+    res.send(reservations);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -15,7 +18,8 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const newReservation = req.body;
-    const [id] = await knex("Reservation").insert(newReservation);
+    const [id] =
+      await knex("Reservation").insert(newReservation);
     res.status(201).json({ id, ...newReservation });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -30,7 +34,9 @@ router.get("/:id", async (req, res) => {
     if (reservation) {
       res.json(reservation);
     } else {
-      res.status(404).json({ error: "Reservation not found" });
+      res
+        .status(404)
+        .json({ error: "Reservation not found" });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -50,7 +56,9 @@ router.put("/:id", async (req, res) => {
         ...updatedReservation,
       });
     } else {
-      res.status(404).json({ error: "Reservation not found" });
+      res
+        .status(404)
+        .json({ error: "Reservation not found" });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -66,7 +74,9 @@ router.delete("/:id", async (req, res) => {
     if (deletedRows) {
       res.json({ message: "Reservation deleted" });
     } else {
-      res.status(404).json({ error: "Reservation not found" });
+      res
+        .status(404)
+        .json({ error: "Reservation not found" });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
