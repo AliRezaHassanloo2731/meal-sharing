@@ -1,10 +1,24 @@
 import team from "@/app/public/team.png";
 import managerteam from "@/app/public/managerTeam.png";
 import Image from "next/image";
+
+export const resvalidate = 24 * 3600;
+
 export const metadata = {
   title: "Review",
 };
-export default function Page() {
+export default async function Page() {
+  const res = await fetch("http://localhost:3001/meals", {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  const mealsData = await res.json();
+
+  if (!mealsData.length) return null;
+
   return (
     <div className="grid grid-cols-5 gap-x-24 gap-y-32 text-lg items-center">
       <div className="col-span-3">
@@ -22,15 +36,15 @@ export default function Page() {
             so much more than that.
           </p>
           <p>
-            Take the food scene, for example. Copenhagen has
-            an incredible food scene, considering how small
-            the city itself is, and one of the things that
-            really makes it special is how people share and
-            collaborate with each other. Restaurants here
-            don’t compete to be the best and destroy the
-            rest; instead, they often collaborate on
-            projects together and help each other out with
-            things.
+            Take our {mealsData.length} foods scene, for
+            example. Copenhagen has an incredible food
+            scene, considering how small the city itself is,
+            and one of the things that really makes it
+            special is how people share and collaborate with
+            each other. Restaurants here don’t compete to be
+            the best and destroy the rest; instead, they
+            often collaborate on projects together and help
+            each other out with things.
           </p>
           <p>
             The easiest way to describe fællesspisning is to
@@ -46,6 +60,7 @@ export default function Page() {
           placeholder="blur"
           quality={80}
           className="object-cover"
+          sizes="(max-width: 768px)"
           alt="Group photo members of team "
         />
       </div>

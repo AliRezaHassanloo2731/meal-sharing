@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { auth } from "@/app/lib/auth";
 
-function Navigation() {
+export async function Navigation() {
+  const session = await auth();
+  console.log(session);
+
   return (
     <nav className="z-10 text-xl">
       <ul className="flex gap-16 items-center">
@@ -33,7 +37,7 @@ function Navigation() {
             href="/Review"
             className="hover:text-accent-400 transition-colors"
           >
-            Review
+            About us
           </Link>
         </li>
       </ul>
