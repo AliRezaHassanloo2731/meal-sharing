@@ -3,114 +3,115 @@ import knex from "../database_client.js";
 
 const router = express.Router();
 
-// Refactored GET /api/meals to handle all query parameters
 router.get("/", async (req, res) => {
-  // try {
+  try {
+    let query = knex("Meal");
 
-  const result = await knex.raw(
-    "SELECT * FROM meal ORDER BY id ASC "
-  );
-  res.send(result[0]);
+    // Filtering by maxPrice
+    if (req.query.maxPrice) {
+      query = query.where(
+        "price",
+        "<=",
+        req.query.maxPrice
+      );
+    }
 
-  // const data = result[0];
-  // if (data.length > 0) {
-  //   res.json(data[0][0]);
-  // } else {
-  //   res.status(404).json({ error: "No meals found" });
-  // }
-  // // } catch (error) {
-  // //   res.status(500).json({ error: error.message });
-  // // }
+    // Filtering by available reservations
+    if (req.query.availableReservations) {
+      query = query
+        .leftJoin(
+          "Reservation",
+          "Meal.id",
+          "Reservation.meal_id"
+        )
+        .groupBy("Meal.id")
+        .select("Meal.*")
+        .count("Reservation.id as reservation_count")
+        .select(
+          knex.raw(
+            "Meal.max_reservations - COUNT(Reservation.id) as available_spots"
+          )
+        );
 
-  // try {
-  //   let query = knex("Meal");
+      if (req.query.availableReservations === "true") {
+        query = query.having(
+          knex.raw("available_spots"),
+          ">",
+          0
+        );
+      } else if (
+        req.query.availableReservations === "false"
+      ) {
+        query = query.having(
+          knex.raw("available_spots"),
+          "<=",
+          0
+        );
+      }
+    }
 
-  //   // Filtering by maxPrice
-  //   if (req.query.maxPrice) {
-  //     query = query.where(
-  //       "price",
-  //       "<=",
-  //       req.query.maxPrice
-  //     );
-  //   }
+    // Search meals by title or description
+    if (req.query.title) {
+      query = query
+        .where("title", "LIKE", `%${req.query.title}%`)
+        .orWhere(
+          "description",
+          "LIKE",
+          `%${req.query.title}%`
+        );
+    }
 
-  //   // Filtering by available reservations
-  //   if (req.query.availableReservations) {
-  //     query = query
-  //       .leftJoin(
-  //         "Reservation",
-  //         "Meal.id",
-  //         "Reservation.meal_id"
-  //       )
-  //       .groupBy("Meal.id")
-  //       .count("Reservation.id as reservation_count")
-  //       .select(
-  //         knex.raw(
-  //           "Meal.max_reservations - COUNT(Reservation.id) as available_spots"
-  //         )
-  //       );
-  //     if (req.query.availableReservations === "true") {
-  //       query = query.having(
-  //         knex.raw("available_spots"),
-  //         ">",
-  //         0
-  //       );
-  //     } else if (
-  //       req.query.availableReservations === "false"
-  //     ) {
-  //       query = query.having(
-  //         knex.raw("available_spots"),
-  //         "<=",
-  //         0
-  //       );
-  //     }
-  //   }
+    // Filter by date (after and before)
+    if (req.query.dateAfter) {
+      query = query.where(
+        "when",
+        ">=",
+        req.query.dateAfter
+      );
+    }
+    if (req.query.dateBefore) {
+      query = query.where(
+        "when",
+        "<=",
+        req.query.dateBefore
+      );
+    }
 
-  //   // Search meals by title or description
-  //   if (req.query.title) {
-  //     query = query
-  //       .where("title", "LIKE", `%${req.query.title}%`)
-  //       .orWhere(
-  //         "description",
-  //         "LIKE",
-  //         `%${req.query.title}%`
-  //       );
-  //   }
+    // Limit the number of results
+    if (req.query.limit) {
+      query = query.limit(req.query.limit);
+    }
 
-  //   // Filter meals by date
-  //   if (req.query.dateAfter) {
-  //     query = query
-  //       .where("when", ">=", req.query.dateAfter)
-  //       .orWhereRaw("DATE(when) = DATE(?)", [
-  //         req.query.dateAfter,
-  //       ]);
-  //   }
+    // Sort by key and direction
+    if (req.query.sortKey && req.query.sortDir) {
+      query = query.orderBy(
+        req.query.sortKey,
+        req.query.sortDir
+      );
+    } else if (req.query.sortKey) {
+      query = query.orderBy(req.query.sortKey, "asc");
+    }
 
-  //   // Limit the number of results
-  //   if (req.query.limit) {
-  //     query = query.limit(req.query.limit);
-  //   }
+    const meals = await query;
+    res.json(meals);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  //   // Sort the meals by a field (default: 'when') and direction (default: 'asc')
-  //   if (req.query.sortKey || req.query.sortOrder) {
-  //     const sortKey = req.query.sortKey || "when";
-  //     const sortOrder = req.query.sortOrder || "asc";
-  //     query = query.orderBy(sortKey, sortOrder);
-  //   }
-
-  //   // Sort meals by price
-  //   if (req.query.sortDir) {
-  //     query = query.orderBy(
-  //       "price",
-  //       req.query.sortDir || "asc"
-  //     );
-  //   }
-
-  //   const meals = await query;
-  //   res.json(meals);
-  // } catch (error) {
-  //   res.status(500).json({ error: error.message });
-  // }
+router.get("/:id", async (req, res) => {
+  try {
+    const meal = await knex("Meal")
+      .where({ id: req.params.id })
+      .first();
+    if (meal) {
+      res.json(meal);
+    } else {
+      res.status(404).json({ error: "Meal not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;
