@@ -83,4 +83,52 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.get("/", async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    // If email is provided, search for the guest by email
+    if (email) {
+      const guest = await knex("Reservation")
+        .select(
+          "id",
+          "contact_name",
+          "contact_phonenumber",
+          "contact_email"
+        )
+        .where("contact_email", email)
+        .first();
+
+      if (guest) {
+        return res.json(guest);
+      } else {
+        return res
+          .status(404)
+          .json({ error: "Guest not found" });
+      }
+    }
+
+    // Otherwise, return all reservations
+    const reservations = await knex
+      .select("*")
+      .from("Reservation");
+    res.json(reservations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const newReservation = req.body; // Assuming newGuest is passed here
+    const [id] =
+      await knex("Reservation").insert(newReservation);
+
+    // Respond with the inserted reservation (guest) data
+    res.status(201).json({ id, ...newReservation });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

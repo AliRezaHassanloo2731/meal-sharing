@@ -1,4 +1,3 @@
-import { Children } from "react";
 import SideNavigation from "../components/SideNavigation";
 
 export default function Layout({ children }) {

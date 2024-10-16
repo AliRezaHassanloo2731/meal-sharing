@@ -7,6 +7,7 @@ import nestedRouter from "./routers/nested.js";
 import mealsRouter from "./routers/meals.js";
 import reservationsRouter from "./routers/reservations.js";
 import reviewsRouter from "./routers/reviews.js";
+import usersRouter from "./routers/users.js";
 
 const app = express();
 const apiRouter = express.Router();
@@ -21,6 +22,7 @@ app.use("/api", apiRouter);
 app.use("/meals", mealsRouter);
 app.use("/reservations", reservationsRouter);
 app.use("/reviews", reviewsRouter);
+app.use("/users", usersRouter);
 
 app.get("/test-connection", async (req, res) => {
   try {
@@ -110,6 +112,7 @@ app.get("/last-meal", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// POST /api/auth/login
 
 app.use("/api", apiRouter);
 

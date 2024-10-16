@@ -21,8 +21,7 @@ function MealCard({ meal }) {
         <Image
           src={image_url}
           fill
-          // width={100}
-          // height={100}
+          sizes="(max-width: 768px)"
           alt={`Meal ${title}`}
           className="object-cover border-r border-primary-800"
         />
@@ -57,7 +56,7 @@ function MealCard({ meal }) {
 
         <div className="bg-primary-950 border-t border-t-primary-800 text-right">
           <Link
-            href={`/meal/${id}`}
+            href={`/MealsList/${id}`}
             className="border-l border-primary-800 py-4 px-6 inline-block hover:bg-accent-600 transition-all hover:text-primary-900"
           >
             Details & reservation &rarr;

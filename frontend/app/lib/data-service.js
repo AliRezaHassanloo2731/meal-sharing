@@ -1,224 +1,216 @@
-import { eachDayOfInterval } from 'date-fns';
+import { eachDayOfInterval } from "date-fns";
 
-/////////////
-// GET
+import axios from "axios";
 
-export async function getCabin(id) {
-  const { data, error } = await supabase
-    .from('cabins')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  // For testing
-  // await new Promise((res) => setTimeout(res, 1000));
-
-  if (error) {
-    console.error(error);
-  }
-
-  return data;
-}
-
-export async function getCabinPrice(id) {
-  const { data, error } = await supabase
-    .from('cabins')
-    .select('regularPrice, discount')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error(error);
-  }
-
-  return data;
-}
-
-export const getCabins = async function () {
-  const { data, error } = await supabase
-    .from('cabins')
-    .select('id, name, maxCapacity, regularPrice, discount, image')
-    .order('name');
-
-  if (error) {
-    console.error(error);
-    throw new Error('Cabins could not be loaded');
-  }
-
-  return data;
-};
-
-// Guests are uniquely identified by their email address
 export async function getGuest(email) {
-  const { data, error } = await supabase
-    .from('guests')
-    .select('*')
-    .eq('email', email)
-    .single();
-
-  // No error here! We handle the possibility of no guest in the sign in callback
-  return data;
-}
-
-export async function getBooking(id) {
-  const { data, error, count } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error(error);
-    throw new Error('Booking could not get loaded');
-  }
-
-  return data;
-}
-
-export async function getBookings(guestId) {
-  const { data, error, count } = await supabase
-    .from('bookings')
-    // We actually also need data on the cabins as well. But let's ONLY take the data that we actually need, in order to reduce downloaded data.
-    .select(
-      'id, created_at, startDate, endDate, numNights, numGuests, totalPrice, guestId, cabinId, cabins(name, image)'
-    )
-    .eq('guestId', guestId)
-    .order('startDate');
-
-  if (error) {
-    console.error(error);
-    throw new Error('Bookings could not get loaded');
-  }
-
-  return data;
-}
-
-export async function getBookedDatesByCabinId(cabinId) {
-  let today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  today = today.toISOString();
-
-  // Getting all bookings
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('cabinId', cabinId)
-    .or(`startDate.gte.${today},status.eq.checked-in`);
-
-  if (error) {
-    console.error(error);
-    throw new Error('Bookings could not get loaded');
-  }
-
-  // Converting to actual dates to be displayed in the date picker
-  const bookedDates = data
-    .map((booking) => {
-      return eachDayOfInterval({
-        start: new Date(booking.startDate),
-        end: new Date(booking.endDate),
-      });
-    })
-    .flat();
-
-  return bookedDates;
-}
-
-export async function getSettings() {
-  const { data, error } = await supabase.from('settings').select('*').single();
-
-  if (error) {
-    console.error(error);
-    throw new Error('Settings could not be loaded');
-  }
-
-  return data;
-}
-
-export async function getCountries() {
   try {
-    const res = await fetch(
-      'https://restcountries.com/v2/all?fields=name,flag'
+    const response = await axios.get(
+      `http://localhost:3001/reservations?email=${email}`
     );
-    const countries = await res.json();
-    return countries;
-  } catch {
-    throw new Error('Could not fetch countries');
+    const guest = response.data;
+
+    if (guest) {
+      return guest;
+    } else {
+      // No guest found
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching guest:", error.message);
+    throw new Error("Unable to fetch guest");
   }
 }
 
-/////////////
-// CREATE
+export async function getBookedDatesByMealId(mealId) {
+  try {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const todayISOString = today.toISOString();
+
+    const response = await axios.get(
+      `http://localhost:3000/reservations?meal_id=${mealId}`
+    );
+
+    const reservations = response.data;
+    console.log(reservations);
+
+    const bookedDates = reservations
+      .filter((reservation) => {
+        return (
+          new Date(reservation.created_date) >=
+          new Date(todayISOString)
+        );
+      })
+      .map((reservation) => {
+        const bookingDate = new Date(
+          reservation.created_date
+        );
+        return eachDayOfInterval({
+          start: bookingDate,
+          end: bookingDate,
+        });
+      })
+      .flat();
+
+    return bookedDates;
+  } catch (error) {
+    console.error("Error fetching booked dates:", error);
+    throw new Error(
+      "Failed to fetch booked dates for the meal."
+    );
+  }
+}
+
+export async function getReservation(id) {
+  try {
+    // Perform a GET request to fetch reservation data by ID
+    const response = await axios.get(
+      `http://localhost:3001/reservations/${id}`
+    );
+
+    return response.data;
+  } catch (error) {
+    // Handle any errors
+    console.error(
+      "Error fetching reservation:",
+      error.message
+    );
+    throw new Error("Reservation could not be loaded");
+  }
+}
+
+export async function getMeals(mealid) {
+  try {
+    const response = await fetch(
+      `http://localhost:3001/meals/${mealid}`
+    );
+
+    // Check if the response is okay (status 200-299)
+    if (!response.ok) {
+      throw new Error(
+        `Error fetching meal with id ${mealid}: ${response.statusText}`
+      );
+    }
+
+    // Parse the response data to JSON
+    const meal = await response.json();
+
+    return meal;
+  } catch (error) {
+    console.error("Failed to fetch meal:", error);
+    throw error; // Rethrow the error to be handled by the caller
+  }
+}
 
 export async function createGuest(newGuest) {
-  const { data, error } = await supabase.from('guests').insert([newGuest]);
-
-  if (error) {
-    console.error(error);
-    throw new Error('Guest could not be created');
+  try {
+    const response = await axios.post(
+      "http://localhost:3001/reservations",
+      newGuest
+    );
+    return response.data; // Return the inserted guest data
+  } catch (error) {
+    console.error("Error creating guest:", error.message);
+    throw new Error("Guest could not be created");
   }
-
-  return data;
 }
 
-export async function createBooking(newBooking) {
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert([newBooking])
-    // So that the newly created object gets returned!
-    .select()
-    .single();
+export async function deleteReservation(id) {
+  try {
+    const response = await axios.delete(
+      `/api/reservations/${id}`
+    );
 
-  if (error) {
+    if (response.status !== 200) {
+      throw new Error("Reservation could not be deleted");
+    }
+
+    return response.data;
+  } catch (error) {
     console.error(error);
-    throw new Error('Booking could not be created');
+    throw error;
   }
-
-  return data;
 }
+//login
+// app.post("/api/auth/login", (req, res) => {
+//   const { email, password } = req.body;
 
-/////////////
-// UPDATE
+//   // Fetch user from the database
+//   const user = getUserByEmail(email);
 
-// The updatedFields is an object which should ONLY contain the updated data
-export async function updateGuest(id, updatedFields) {
-  const { data, error } = await supabase
-    .from('guests')
-    .update(updatedFields)
-    .eq('id', id)
-    .select()
-    .single();
+//   if (!user || user.password !== password) {
+//     return res
+//       .status(401)
+//       .json({ message: "Invalid credentials" });
+//   }
 
-  if (error) {
-    console.error(error);
-    throw new Error('Guest could not be updated');
-  }
-  return data;
-}
+//   // Generate a session or token
+//   const token = generateToken(user);
 
-export async function updateBooking(id, updatedFields) {
-  const { data, error } = await supabase
-    .from('bookings')
-    .update(updatedFields)
-    .eq('id', id)
-    .select()
-    .single();
+//   res.status(200).json({ token, user });
+// });
 
-  if (error) {
-    console.error(error);
-    throw new Error('Booking could not be updated');
-  }
-  return data;
-}
+// //search;
+// app.get("/api/meals", (req, res) => {
+//   const { title } = req.query;
 
-/////////////
-// DELETE
+//   const meals = getMeals(); // Fetch meals from DB or API
+//   const filteredMeals = title
+//     ? meals.filter((meal) =>
+//         meal.title
+//           .toLowerCase()
+//           .includes(title.toLowerCase())
+//       )
+//     : meals;
 
-export async function deleteBooking(id) {
-  const { data, error } = await supabase.from('bookings').delete().eq('id', id);
+//   res.status(200).json(filteredMeals);
+// });
+// //sorting
+// // GET /api/meals?sortField=price&sortOrder=asc
+// app.get("/api/meals", (req, res) => {
+//   const { sortField, sortOrder } = req.query;
+//   let meals = getMeals(); // Fetch meals
 
-  if (error) {
-    console.error(error);
-    throw new Error('Booking could not be deleted');
-  }
-  return data;
+//   // Sort meals based on field and direction
+//   if (sortField) {
+//     meals.sort((a, b) => {
+//       if (sortOrder === "asc") {
+//         return a[sortField] > b[sortField] ? 1 : -1;
+//       } else {
+//         return a[sortField] < b[sortField] ? 1 : -1;
+//       }
+//     });
+//   }
+
+//   res.status(200).json(meals);
+// });
+// axios
+//   .post("https://example.com/api/users", postData)
+//   .then((response) => {
+//     console.log("Response Data:", response.data);
+//   })
+//   .catch((error) => {
+//     console.error("Error:", error);
+//   });
+// export async function createGuest(newGuest) {
+//   try {
+//     const response = await axios.post(
+//       "http://localhost:3001/reservations",
+//       newGuest
+//     );
+//     return response.data; // Return the inserted guest data
+//   } catch (error) {
+//     console.error("Error creating guest:", error.message);
+//     throw new Error("Guest could not be created");
+//   }
+// }
+export async function AddReservation(newReservation) {
+  axios
+    .post("https://example.com/api/users", meal)
+    .then((response) => {
+      console.log("Response Data:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
 }
